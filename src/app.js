@@ -2,9 +2,11 @@
  * 台灣汽車筆試題庫 2026 最新版 - 主應用程式 (Vite Single Page Application)
  */
 
+import questionsData from './data/questions.json';
+
 // State Object
 const state = {
-  questions: [],
+  questions: questionsData || [],
   currentView: 'dashboard',
   
   // User Storage
@@ -33,14 +35,21 @@ const mainContainer = document.getElementById('main-container');
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
 const badgeWrongCount = document.getElementById('badge-wrong-count');
 
+// Helper to resolve image paths for subpath hosting (GitHub Pages)
+function getImageUrl(imgPath) {
+  if (!imgPath) return '';
+  if (imgPath.startsWith('http') || imgPath.startsWith('./')) return imgPath;
+  return `./${imgPath}`;
+}
+
 // Initialize App
-async function init() {
+function init() {
   // Apply saved theme
   document.documentElement.setAttribute('data-theme', state.theme);
   
   // Setup navbar listeners
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', () => {
       const view = btn.dataset.view;
       if (view) switchView(view);
     });
@@ -49,20 +58,8 @@ async function init() {
   document.getElementById('nav-brand').addEventListener('click', () => switchView('dashboard'));
   btnThemeToggle.addEventListener('click', toggleTheme);
 
-  // Fetch Questions JSON
-  try {
-    const res = await fetch('/src/data/questions.json');
-    state.questions = await res.json();
-    updateBadges();
-    switchView('dashboard');
-  } catch (err) {
-    mainContainer.innerHTML = `
-      <div class="glass-card" style="text-align: center; color: var(--danger-color);">
-        <h2>⚠️ 題庫載入失敗</h2>
-        <p>無法讀取 questions.json，請確認檔案路徑。</p>
-      </div>
-    `;
-  }
+  updateBadges();
+  switchView('dashboard');
 }
 
 // Save LocalStorage
@@ -117,7 +114,6 @@ function renderDashboard() {
   const totalCount = state.questions.length;
   const answeredCount = Object.keys(state.userAnswers).length;
   const wrongCount = Object.keys(state.wrongAnswers).length;
-  const bookmarksCount = state.bookmarks.size;
   const bestScore = state.examHistory.length > 0
     ? Math.max(...state.examHistory.map(h => h.score))
     : null;
@@ -157,7 +153,7 @@ function renderDashboard() {
           <div class="stat-label">錯題本數量</div>
         </div>
         <div class="stat-box">
-          <div class="stat-num" style="color: ${bestScore >= 85 ? 'var(--success-color)' : 'var(--accent-primary)'};">
+          <div class="stat-num" style="color: ${bestScore !== null && bestScore >= 85 ? 'var(--success-color)' : 'var(--accent-primary)'};">
             ${bestScore !== null ? bestScore + '分' : '無紀錄'}
           </div>
           <div class="stat-label">模擬考最佳成績</div>
@@ -222,16 +218,13 @@ function renderDashboard() {
    2. MOCK EXAM MODE
    ========================================================================== */
 function startNewExam(questionCount = 40) {
-  // Clear any existing timer
   if (state.activeExam && state.activeExam.timerInterval) {
     clearInterval(state.activeExam.timerInterval);
   }
 
-  // Sample questions (22 rule questions, 18 sign questions if available)
   const signQs = state.questions.filter(q => q.image !== null);
   const textQs = state.questions.filter(q => q.image === null);
 
-  // Shuffle helpers
   const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
   
   const sampledSigns = shuffle(signQs).slice(0, 18);
@@ -240,22 +233,21 @@ function startNewExam(questionCount = 40) {
 
   state.activeExam = {
     questions: examQs,
-    answers: {}, // { [qId]: optionNum }
+    answers: {},
     currentIndex: 0,
-    timeRemainingSec: 30 * 60, // 30 minutes
+    timeRemainingSec: 30 * 60,
     timerInterval: null,
     isSubmitted: false,
     score: 0
   };
 
-  // Start Countdown Timer
   state.activeExam.timerInterval = setInterval(() => {
     if (state.activeExam.timeRemainingSec > 0) {
       state.activeExam.timeRemainingSec--;
       updateTimerDisplay();
     } else {
       clearInterval(state.activeExam.timerInterval);
-      submitExam(true); // Auto submit on timeout
+      submitExam(true);
     }
   }, 1000);
 
@@ -296,7 +288,6 @@ function renderExam() {
 
   mainContainer.innerHTML = `
     <div class="quiz-container">
-      <!-- Quiz Top Bar -->
       <div class="quiz-header glass-card" style="padding: 16px 24px; margin-bottom: 20px;">
         <div style="font-weight: 700;">
           <span style="color: var(--accent-primary);">題目 ${exam.currentIndex + 1}</span> / ${total}
@@ -309,7 +300,6 @@ function renderExam() {
         </button>
       </div>
 
-      <!-- Question Card -->
       <div class="glass-card question-card">
         <div class="q-meta">
           <span class="q-tag">第 ${curQ.id} 題 ｜ ${curQ.section}</span>
@@ -320,7 +310,7 @@ function renderExam() {
 
         ${curQ.image ? `
           <div class="q-image-container">
-            <img src="/${curQ.image}" alt="題示圖片" class="q-image" />
+            <img src="${getImageUrl(curQ.image)}" alt="題示圖片" class="q-image" />
           </div>
         ` : ''}
 
@@ -350,7 +340,6 @@ function renderExam() {
         </div>
       </div>
 
-      <!-- Question Jump Drawer -->
       <div class="glass-card q-grid-drawer">
         ${exam.questions.map((q, idx) => {
           const isAns = exam.answers[q.id] !== undefined;
@@ -367,7 +356,6 @@ function renderExam() {
 
   updateTimerDisplay();
 
-  // Option Click Listener
   document.querySelectorAll('.option-item').forEach(item => {
     item.addEventListener('click', () => {
       const optNum = intVal(item.dataset.opt);
@@ -378,7 +366,6 @@ function renderExam() {
     });
   });
 
-  // Bookmark Toggle
   document.getElementById('btn-toggle-bookmark').addEventListener('click', () => {
     if (state.bookmarks.has(curQ.id)) state.bookmarks.delete(curQ.id);
     else state.bookmarks.add(curQ.id);
@@ -386,7 +373,6 @@ function renderExam() {
     renderExam();
   });
 
-  // Nav Arrows
   document.getElementById('btn-prev-q').addEventListener('click', () => {
     if (exam.currentIndex > 0) {
       exam.currentIndex--;
@@ -401,7 +387,6 @@ function renderExam() {
     }
   });
 
-  // Drawer Jumps
   document.querySelectorAll('.q-grid-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       exam.currentIndex = intVal(btn.dataset.idx);
@@ -409,7 +394,6 @@ function renderExam() {
     });
   });
 
-  // Submit Button
   document.getElementById('btn-submit-exam').addEventListener('click', () => {
     const answeredCount = Object.keys(exam.answers).length;
     const unAnsCount = total - answeredCount;
@@ -431,14 +415,12 @@ function submitExam(isTimeout = false) {
 
   exam.isSubmitted = true;
   
-  // Calculate Score (40 questions, each 2.5 points = 100 points)
   let correctCount = 0;
   exam.questions.forEach(q => {
     const userAns = exam.answers[q.id];
     if (userAns === q.ans) {
       correctCount++;
     } else {
-      // Record wrong answer
       state.wrongAnswers[q.id] = (state.wrongAnswers[q.id] || 0) + 1;
     }
   });
@@ -447,7 +429,6 @@ function submitExam(isTimeout = false) {
   exam.score = score;
   const isPassed = score >= 85;
 
-  // Save to history
   state.examHistory.push({
     timestamp: Date.now(),
     score: score,
@@ -499,7 +480,6 @@ function renderExamReport() {
         </div>
       </div>
 
-      <!-- Question Review List -->
       <h3 style="margin: 32px 0 16px; font-weight: 800;">📝 題目詳細檢討列表</h3>
       <div style="display: flex; flex-direction: column; gap: 16px;">
         ${exam.questions.map((q, idx) => {
@@ -514,7 +494,7 @@ function renderExamReport() {
                 <span style="font-size: 0.85rem; color: var(--text-muted);">${q.category}</span>
               </div>
               
-              ${q.image ? `<img src="/${q.image}" style="max-height: 140px; margin: 8px 0; border-radius: 8px;" />` : ''}
+              ${q.image ? `<img src="${getImageUrl(q.image)}" style="max-height: 140px; margin: 8px 0; border-radius: 8px;" />` : ''}
               <div style="font-weight: 700; margin-bottom: 12px;">${q.prompt}</div>
 
               <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.92rem;">
@@ -546,12 +526,11 @@ function renderExamReport() {
 }
 
 /* ==========================================================================
-   3. PRACTICE MODE (Sequential & Category)
+   3. PRACTICE MODE
    ========================================================================== */
 function renderPractice() {
   const sections = ["ALL", "架構一", "架構二", "架構三"];
   
-  // Filter questions
   let filtered = state.questions;
   if (state.activePractice.sectionFilter !== 'ALL') {
     filtered = filtered.filter(q => q.section.includes(state.activePractice.sectionFilter));
@@ -571,7 +550,6 @@ function renderPractice() {
 
   mainContainer.innerHTML = `
     <div class="quiz-container">
-      <!-- Filter Bar -->
       <div class="glass-card" style="margin-bottom: 20px; padding: 16px 24px;">
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <span style="font-weight: 700; font-size: 0.9rem;">篩選架構：</span>
@@ -583,7 +561,6 @@ function renderPractice() {
         </div>
       </div>
 
-      <!-- Practice Card -->
       <div class="glass-card question-card">
         <div class="q-meta">
           <span class="q-tag">第 ${curIdx + 1} / ${total} 題 (題號 ${curQ.id}) ｜ ${curQ.category}</span>
@@ -594,7 +571,7 @@ function renderPractice() {
 
         ${curQ.image ? `
           <div class="q-image-container">
-            <img src="/${curQ.image}" alt="題示圖片" class="q-image" />
+            <img src="${getImageUrl(curQ.image)}" alt="題示圖片" class="q-image" />
           </div>
         ` : ''}
 
@@ -623,7 +600,6 @@ function renderPractice() {
           }).join('')}
         </div>
 
-        <!-- Answer explanation hint -->
         ${userAns !== undefined ? `
           <div style="margin-top: 16px; padding: 14px; border-radius: 10px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); font-weight: 700; color: var(--text-main);">
             正確答案：(${curQ.ans}) ${curQ.options[curQ.ans - 1]}
@@ -645,7 +621,6 @@ function renderPractice() {
     </div>
   `;
 
-  // Section Pills
   document.querySelectorAll('.pill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activePractice.sectionFilter = btn.dataset.sec;
@@ -654,7 +629,6 @@ function renderPractice() {
     });
   });
 
-  // Options Click
   document.querySelectorAll('.option-item').forEach(item => {
     item.addEventListener('click', () => {
       const optNum = intVal(item.dataset.opt);
@@ -668,7 +642,6 @@ function renderPractice() {
     });
   });
 
-  // Bookmark Toggle
   document.getElementById('btn-toggle-bookmark-prac').addEventListener('click', () => {
     if (state.bookmarks.has(curQ.id)) state.bookmarks.delete(curQ.id);
     else state.bookmarks.add(curQ.id);
@@ -676,7 +649,6 @@ function renderPractice() {
     renderPractice();
   });
 
-  // Nav Arrows
   document.getElementById('btn-prev-prac').addEventListener('click', () => {
     if (state.activePractice.currentIndex > 0) {
       state.activePractice.currentIndex--;
@@ -693,7 +665,7 @@ function renderPractice() {
 }
 
 /* ==========================================================================
-   4. NOTEBOOK VIEW (Wrong Questions & Bookmarks)
+   4. NOTEBOOK VIEW
    ========================================================================== */
 function renderNotebook() {
   const wrongIds = Object.keys(state.wrongAnswers).map(id => intVal(id));
@@ -768,7 +740,6 @@ function renderNotebook() {
 }
 
 function renderQuestionSummaryItem(q) {
-  const isBookmarked = state.bookmarks.has(q.id);
   return `
     <div class="glass-card" style="padding: 20px;">
       <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -777,7 +748,7 @@ function renderQuestionSummaryItem(q) {
           移除紀錄
         </button>
       </div>
-      ${q.image ? `<img src="/${q.image}" style="max-height: 120px; margin: 8px 0; border-radius: 8px;" />` : ''}
+      ${q.image ? `<img src="${getImageUrl(q.image)}" style="max-height: 120px; margin: 8px 0; border-radius: 8px;" />` : ''}
       <div style="font-weight: 700; margin-bottom: 8px;">${q.prompt}</div>
       <div style="color: var(--success-color); font-weight: 700; font-size: 0.92rem;">
         正解：(${q.ans}) ${q.options[q.ans - 1]}
@@ -809,7 +780,6 @@ function renderSearch() {
       </div>
 
       <div class="search-results-list" id="search-results-container">
-        <!-- Search Results Rendered Dynamically -->
       </div>
     </div>
   `;
@@ -837,12 +807,10 @@ function updateSearchResults() {
   const kw = state.searchKeyword.trim().toLowerCase();
   
   let results = state.questions.filter(q => {
-    // Filter type
     if (state.searchFilter === 'IMAGE' && !q.image) return false;
     if (state.searchFilter === 'WRONG' && !(q.id in state.wrongAnswers)) return false;
     if (state.searchFilter === 'BOOKMARK' && !state.bookmarks.has(q.id)) return false;
 
-    // Keyword match
     if (!kw) return true;
     if (String(q.id) === kw) return true;
     if (q.prompt.toLowerCase().includes(kw)) return true;
