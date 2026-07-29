@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣汽車筆試題庫 2026 最新版 - 互動模擬測驗與刷題系統</title>
+  <meta name="description" content="115年最新交通部公路局汽車駕照筆試題庫線上模擬測驗，包含1,090題完整法規、標誌標線與安全駕駛題目。">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header / Navbar -->
+    <header class="navbar glass-nav">
+      <div class="nav-container">
+        <div class="brand" id="nav-brand">
+          <div class="brand-icon">🚘</div>
+          <div class="brand-text">
+            <span class="brand-title">汽車筆試神之題庫</span>
+            <span class="brand-subtitle">115年最新 1,090 題</span>
+          </div>
+        </div>
+        
+        <nav class="nav-links">
+          <button class="nav-btn active" data-view="dashboard" id="btn-nav-dashboard">
+            <span class="btn-icon">📊</span> 學習總覽
+          </button>
+
+          <button class="nav-btn accent-btn" data-view="exam" id="btn-nav-exam">
+            <span class="btn-icon">🚀</span> 模擬測驗
+          </button>
+
+          <button class="nav-btn" data-view="practice" id="btn-nav-practice">
+            <span class="btn-icon">📚</span> 順序刷題
+          </button>
+
+          <button class="nav-btn" data-view="notebook" id="btn-nav-notebook">
+            <span class="btn-icon">❤️</span> 錯題與收藏 <span class="badge" id="badge-wrong-count">0</span>
+          </button>
+
+          <button class="nav-btn" data-view="search" id="btn-nav-search">
+            <span class="btn-icon">🔍</span> 搜尋題庫
+          </button>
+        </nav>
+
+        <div class="nav-controls">
+          <button class="theme-toggle" id="btn-theme-toggle" title="切換深色/淺色主題">
+            <span class="theme-icon-dark">🌙</span>
+            <span class="theme-icon-light">☀️</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="main-container">
+      <!-- Views will be dynamically rendered here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>© 2026 台灣汽車駕照筆試題庫系統 ｜ 資料來源：交通部公路局（115.06.09最新修訂）</p>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
